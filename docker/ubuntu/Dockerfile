@@ -1,39 +1,18 @@
-FROM ubuntu:14.04
-WORKDIR /build
+FROM ubuntu:16.04
+MAINTAINER AnyBucket <anybucket@gmail.com>
+LABEL description="lightweight parity wallet app running from docker container by http://bit.ly/docker-dmdcoin"
+
 # install tools and dependencies
-RUN apt-get update && \
-        apt-get install -y \
-        g++ \
-        curl \
-        git \
-        file \
-        binutils
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates wget --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
-# install rustup
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+VOLUME /root/.parity
 
-# rustup directory
-ENV PATH /root/.cargo/bin:$PATH
+WORKDIR /root
 
-# show backtraces
-ENV RUST_BACKTRACE 1
+RUN wget https://github.com/ethcore/parity/releases/download/v1.3.7/parity_1.3.7-0_amd64.deb && \
+    dpkg -i parity_1.3.7-0_amd64.deb && \
+    rm parity_1.3.7-0_amd64.deb
 
-# show tools
-RUN rustc -vV && \
-cargo -V && \
-gcc -v &&\
-g++ -v
-
-# build parity
-RUN git clone https://github.com/ethcore/parity && \
-        cd parity && \
-        git checkout beta && \
-        git pull && \
-        cargo build --release --verbose && \
-        ls /build/parity/target/release/parity && \
-        strip /build/parity/target/release/parity
-
-RUN file /build/parity/target/release/parity
-
-EXPOSE 8080 8545 8180
-ENTRYPOINT ["/build/parity/target/release/parity"]
+ENTRYPOINT ["/usr/bin/parity","--tracing","on","--rpcaddr","0.0.0.0","--jsonrpc-interface","all","--jsonrpc-hosts","all"]
